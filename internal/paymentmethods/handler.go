@@ -284,27 +284,6 @@ func (h *Handler) operatorSendSetupEmail(w http.ResponseWriter, r *http.Request)
 			"email setup-link sending is not configured on this Hardcount instance")
 		return
 	}
-	// Cooldown — 1 send per (tenant, customer) per 60s. Defends
-	// against operator double-click and abusive automation. Returns
-	// 429 with retry-after when fired; the operator's "Sending…" UI
-	// state already prevents the common single-page double-click,
-	// but a refresh-then-click or two operators on the same customer
-	// could still race without this server-side gate.
-	if h.cooldown != nil {
-		key := "setup-link:" + tenantID + ":" + customerID
-		_, resetAt, allowed := h.cooldown.AllowKey(r.Context(), key)
-		if !allowed {
-			retryIn := int(time.Until(resetAt).Seconds())
-			if retryIn < 1 {
-				retryIn = 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(retryIn))
-			respond.Error(w, r, http.StatusTooManyRequests, "rate_limit_error",
-				"cooldown_active",
-				"a setup link was sent to this customer recently — wait before sending again")
-			return
-		}
-	}
 	note := strings.TrimSpace(req.Note)
 	if len(note) > 2000 {
 		respond.Error(w, r, http.StatusUnprocessableEntity, "invalid_request_error",
@@ -335,6 +314,30 @@ func (h *Handler) operatorSendSetupEmail(w http.ResponseWriter, r *http.Request)
 	if !h.emailConfigured {
 		respond.FromError(w, r, errs.EmailNotConfigured(), "payment_method")
 		return
+	}
+
+	// Cooldown — 1 send per (tenant, customer) per 60s. Defends
+	// against operator double-click and abusive automation. Returns
+	// 429 with retry-after when fired; the operator's "Sending…" UI
+	// state already prevents the common single-page double-click,
+	// but a refresh-then-click or two operators on the same customer
+	// could still race without this server-side gate. Taken only after
+	// every check that refuses without sending, so a refused request
+	// does not start the cooldown.
+	if h.cooldown != nil {
+		key := "setup-link:" + tenantID + ":" + customerID
+		_, resetAt, allowed := h.cooldown.AllowKey(r.Context(), key)
+		if !allowed {
+			retryIn := int(time.Until(resetAt).Seconds())
+			if retryIn < 1 {
+				retryIn = 1
+			}
+			w.Header().Set("Retry-After", strconv.Itoa(retryIn))
+			respond.Error(w, r, http.StatusTooManyRequests, "rate_limit_error",
+				"cooldown_active",
+				"a setup link was sent to this customer recently — wait before sending again")
+			return
+		}
 	}
 
 	url, sessionID, err := h.svc.CreateSetupSession(r.Context(), tenantID, customerID, "")
