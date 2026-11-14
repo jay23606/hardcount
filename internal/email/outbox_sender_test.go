@@ -39,7 +39,7 @@ func TestOutboxSender_RequiresTenantID(t *testing.T) {
 	// access, so we never reach the store call.
 	s := NewOutboxSender(nil)
 
-	err := s.SendInvoice(context.Background(), "", "to@x.com", nil, "n", "inv", 1, "USD", nil, "", false)
+	err := s.SendInvoice(context.Background(), "", "to@x.com", nil, "n", "inv", 1, "USD", nil, "", false, false)
 	if err == nil {
 		t.Error("SendInvoice with empty tenantID should error")
 	}
@@ -54,7 +54,7 @@ func TestOutboxSender_SuppressedRecipient(t *testing.T) {
 	s := NewOutboxSender(nil)
 	s.SetSuppressionChecker(suppressionFake{suppressed: true, reason: "bounced: 550 user unknown"})
 
-	err := s.SendInvoice(context.Background(), "tnt_a", "bounced@x.com", nil, "n", "inv", 1, "USD", nil, "", false)
+	err := s.SendInvoice(context.Background(), "tnt_a", "bounced@x.com", nil, "n", "inv", 1, "USD", nil, "", false, false)
 	if !errors.Is(err, ErrRecipientSuppressed) {
 		t.Errorf("expected ErrRecipientSuppressed; got %v", err)
 	}
@@ -74,7 +74,7 @@ func TestOutboxSender_SuppressionCheckerErrorFailsOpen(t *testing.T) {
 	s := NewOutboxSender(nil) // nil store will panic on enqueue
 	s.SetSuppressionChecker(suppressionFake{err: errors.New("db down")})
 
-	_ = s.SendInvoice(context.Background(), "tnt_a", "ok@x.com", nil, "n", "inv", 1, "USD", nil, "", false)
+	_ = s.SendInvoice(context.Background(), "tnt_a", "ok@x.com", nil, "n", "inv", 1, "USD", nil, "", false, false)
 	t.Error("expected the nil-store panic confirming fail-open path")
 }
 
@@ -101,7 +101,7 @@ func TestOutboxMessage_EveryPayloadKeyIsClassified(t *testing.T) {
 		"trigger": true, "attempt_number": true, "max_attempts": true,
 		"next_retry_date": true, "reason": true, "failure_reason": true,
 		"escalation_outcome": true, "operator_note": true, "inviter_email": true,
-		"tenant_name": true, "invoice_written_off": true,
+		"tenant_name": true, "invoice_written_off": true, "invoice_below_minimum": true,
 		// A yes/no on which warning copy was sent (#966): no link, no token.
 		"card_needs_replacing": true,
 		"decline_ask":          true,

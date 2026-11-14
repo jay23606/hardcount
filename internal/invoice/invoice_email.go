@@ -88,7 +88,7 @@ func (h *Handler) emailInvoice(ctx context.Context, tenantID string, inv domain.
 	// AmountDueCents, not Total: the email template labels this figure
 	// "Amount due", and credits/partial payments make the two differ —
 	// telling a customer they owe the pre-credit total is wrong.
-	if err := h.emailSender.SendInvoice(bound, tenantID, to, cc, bt.Name, inv.InvoiceNumber, inv.AmountDueCents, inv.Currency, pdfBytes, inv.PublicToken, inv.Status == domain.InvoiceUncollectible); err != nil {
+	if err := h.emailSender.SendInvoice(bound, tenantID, to, cc, bt.Name, inv.InvoiceNumber, inv.AmountDueCents, inv.Currency, pdfBytes, inv.PublicToken, inv.Status == domain.InvoiceUncollectible, inv.BelowStripeMinimum()); err != nil {
 		return err
 	}
 

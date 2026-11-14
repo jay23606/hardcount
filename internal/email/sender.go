@@ -473,15 +473,17 @@ func (s *Sender) hostedInvoiceURL(publicToken string) string {
 // An owed invoice that is not written off and has a hosted page offers
 // "View & pay" only when that page will offer Pay (canPayOnline). The check
 // is read only then, so a failed read never holds up a settled or
-// written-off invoice's email.
-func (s *Sender) SendInvoice(ctx context.Context, tenantID, to string, cc []string, customerName, invoiceNumber string, totalCents int64, currency string, pdfBytes []byte, publicToken string, writtenOff bool) error {
+// written-off invoice's email. belowMinimum is the hosted page's own fact
+// (domain.Invoice.BelowStripeMinimum): its page has no Pay button, so the
+// email does not offer one either.
+func (s *Sender) SendInvoice(ctx context.Context, tenantID, to string, cc []string, customerName, invoiceNumber string, totalCents int64, currency string, pdfBytes []byte, publicToken string, writtenOff, belowMinimum bool) error {
 	brand := s.brandingFor(ctx, tenantID)
 	hostedURL := s.hostedInvoiceURL(publicToken)
 	amount := formatAmount(totalCents, currency)
 	zeroDue := totalCents == 0
 
 	payOnline := false
-	if hostedURL != "" && !zeroDue && !writtenOff {
+	if hostedURL != "" && !zeroDue && !writtenOff && !belowMinimum {
 		var err error
 		if payOnline, err = s.canPayOnline(ctx, tenantID); err != nil {
 			return fmt.Errorf("invoice email: read the Stripe connection: %w", err)

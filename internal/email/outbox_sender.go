@@ -130,9 +130,13 @@ type outboxMessage struct {
 	// contact the seller rather than promising "we'll collect it
 	// automatically", and the invoice email offers "View invoice", not
 	// "View & pay".
-	InvoiceWrittenOff bool   `json:"invoice_written_off,omitempty"`
-	PublicToken       string `json:"public_token,omitempty"`
-	PDF               []byte `json:"pdf,omitempty"`
+	InvoiceWrittenOff bool `json:"invoice_written_off,omitempty"`
+	// InvoiceBelowMinimum marks an invoice whose hosted page has no Pay button
+	// because Stripe refused its amount as below the minimum charge. The
+	// invoice email then offers "View invoice", not "View & pay".
+	InvoiceBelowMinimum bool   `json:"invoice_below_minimum,omitempty"`
+	PublicToken         string `json:"public_token,omitempty"`
+	PDF                 []byte `json:"pdf,omitempty"`
 }
 
 // declineAsk is the copy the row asks for: DeclineAsk, or for a row an older
@@ -272,7 +276,7 @@ func (s *OutboxSender) enqueueTx(ctx context.Context, tx *sql.Tx, tenantID, emai
 }
 
 // SendInvoice enqueues an invoice email. Satisfies invoice.EmailSender.
-func (s *OutboxSender) SendInvoice(ctx context.Context, tenantID, to string, cc []string, customerName, invoiceNumber string, totalCents int64, currency string, pdfBytes []byte, publicToken string, writtenOff bool) error {
+func (s *OutboxSender) SendInvoice(ctx context.Context, tenantID, to string, cc []string, customerName, invoiceNumber string, totalCents int64, currency string, pdfBytes []byte, publicToken string, writtenOff, belowMinimum bool) error {
 	return s.enqueue(ctx, tenantID, TypeInvoice, outboxMessage{
 		To:            to,
 		Cc:            cc,
@@ -283,7 +287,8 @@ func (s *OutboxSender) SendInvoice(ctx context.Context, tenantID, to string, cc 
 		PublicToken:   publicToken,
 		PDF:           pdfBytes,
 		// Rows an older binary queued decode to false: the ordinary copy.
-		InvoiceWrittenOff: writtenOff,
+		InvoiceWrittenOff:   writtenOff,
+		InvoiceBelowMinimum: belowMinimum,
 	})
 }
 

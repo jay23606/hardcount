@@ -144,7 +144,7 @@ type DunningTimelineFetcher interface {
 // (set by auth middleware) so the underlying enqueue / brand lookup
 // stamps the right tenant_settings + email_outbox row.
 type EmailSender interface {
-	SendInvoice(ctx context.Context, tenantID, to string, cc []string, customerName, invoiceNumber string, totalCents int64, currency string, pdfBytes []byte, publicToken string, writtenOff bool) error
+	SendInvoice(ctx context.Context, tenantID, to string, cc []string, customerName, invoiceNumber string, totalCents int64, currency string, pdfBytes []byte, publicToken string, writtenOff, belowMinimum bool) error
 }
 
 // EmailEventLister surfaces customer-notification email rows

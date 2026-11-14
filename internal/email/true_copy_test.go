@@ -136,7 +136,7 @@ func TestSendInvoice_WrittenOffHTMLPartOffersViewNotPay(t *testing.T) {
 		{true, "View invoice", "View &amp; pay invoice"},
 		{false, "View &amp; pay invoice", closedForOnlinePayment},
 	} {
-		if err := s.SendInvoice(ctx, "t1", "ap@acme.test", nil, "Ada", "INV-0042", 6000, "usd", []byte("%PDF"), "tok_abc", tc.writtenOff); err != nil {
+		if err := s.SendInvoice(ctx, "t1", "ap@acme.test", nil, "Ada", "INV-0042", 6000, "usd", []byte("%PDF"), "tok_abc", tc.writtenOff, false); err != nil {
 			t.Fatalf("send: %v", err)
 		}
 		msg, err := mail.ReadMessage(strings.NewReader(srv.lastData()))
@@ -158,7 +158,7 @@ type writtenOffDeliverer struct {
 	writtenOff []bool
 }
 
-func (w *writtenOffDeliverer) SendInvoice(_ context.Context, _, _ string, _ []string, _, _ string, _ int64, _ string, _ []byte, _ string, writtenOff bool) error {
+func (w *writtenOffDeliverer) SendInvoice(_ context.Context, _, _ string, _ []string, _, _ string, _ int64, _ string, _ []byte, _ string, writtenOff, _ bool) error {
 	w.writtenOff = append(w.writtenOff, writtenOff)
 	return nil
 }

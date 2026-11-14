@@ -268,7 +268,7 @@ func TestEmailOutbox_OutboxSender_RoundTrip(t *testing.T) {
 	sender := email.NewOutboxSender(store)
 
 	pdf := []byte("%PDF-fake")
-	if err := sender.SendInvoice(ctx, tenantID, "ada@example.com", []string{"finance@example.com"}, "Ada", "HC-7", 25_000, "USD", pdf, "hc_pinv_roundtrip", true); err != nil {
+	if err := sender.SendInvoice(ctx, tenantID, "ada@example.com", []string{"finance@example.com"}, "Ada", "HC-7", 25_000, "USD", pdf, "hc_pinv_roundtrip", true, false); err != nil {
 		t.Fatalf("enqueue SendInvoice: %v", err)
 	}
 
@@ -426,7 +426,7 @@ type fakeDeliverer struct {
 	lastWrittenOff    bool
 }
 
-func (f *fakeDeliverer) SendInvoice(_ context.Context, tenantID, to string, cc []string, name, inv string, total int64, cur string, pdf []byte, publicToken string, writtenOff bool) error {
+func (f *fakeDeliverer) SendInvoice(_ context.Context, tenantID, to string, cc []string, name, inv string, total int64, cur string, pdf []byte, publicToken string, writtenOff, belowMinimum bool) error {
 	f.calls++
 	f.lastWrittenOff = writtenOff
 	f.lastType, f.lastTenant, f.lastTo, f.lastName, f.lastInvoice = email.TypeInvoice, tenantID, to, name, inv
@@ -526,21 +526,22 @@ func callDeliverer(ctx context.Context, d email.EmailDeliverer, row email.Outbox
 		// hand-maintained twin of the production payload, so a field added
 		// there and not here decodes to zero and the assertion silently
 		// passes against nothing.
-		EscalationOutcome  domain.DunningEscalationOutcome `json:"escalation_outcome"`
-		FailureReason      string                          `json:"failure_reason"`
-		CardNeedsReplacing bool                            `json:"card_needs_replacing"`
-		DeclineAsk         domain.DeclineAsk               `json:"decline_ask"`
-		UpdateURL          string                          `json:"update_url"`
-		InvoiceWrittenOff  bool                            `json:"invoice_written_off"`
-		PublicToken        string                          `json:"public_token"`
-		PDF                []byte                          `json:"pdf"`
+		EscalationOutcome   domain.DunningEscalationOutcome `json:"escalation_outcome"`
+		FailureReason       string                          `json:"failure_reason"`
+		CardNeedsReplacing  bool                            `json:"card_needs_replacing"`
+		DeclineAsk          domain.DeclineAsk               `json:"decline_ask"`
+		UpdateURL           string                          `json:"update_url"`
+		InvoiceWrittenOff   bool                            `json:"invoice_written_off"`
+		InvoiceBelowMinimum bool                            `json:"invoice_below_minimum"`
+		PublicToken         string                          `json:"public_token"`
+		PDF                 []byte                          `json:"pdf"`
 	}
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return err
 	}
 	switch row.EmailType {
 	case email.TypeInvoice:
-		return d.SendInvoice(ctx, row.TenantID, m.To, m.Cc, m.CustomerName, m.InvoiceNumber, m.AmountCents, m.Currency, m.PDF, m.PublicToken, m.InvoiceWrittenOff)
+		return d.SendInvoice(ctx, row.TenantID, m.To, m.Cc, m.CustomerName, m.InvoiceNumber, m.AmountCents, m.Currency, m.PDF, m.PublicToken, m.InvoiceWrittenOff, m.InvoiceBelowMinimum)
 	case email.TypePaymentReceipt:
 		return d.SendPaymentReceipt(ctx, row.TenantID, m.To, m.Cc, m.CustomerName, m.InvoiceNumber, m.AmountCents, m.Currency, m.PublicToken)
 	case email.TypeDunningWarning:

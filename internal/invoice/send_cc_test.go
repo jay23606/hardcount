@@ -23,7 +23,7 @@ type ccCapturingSender struct {
 	writtenOff bool
 }
 
-func (c *ccCapturingSender) SendInvoice(_ context.Context, _, to string, cc []string, _, _ string, _ int64, _ string, _ []byte, _ string, writtenOff bool) error {
+func (c *ccCapturingSender) SendInvoice(_ context.Context, _, to string, cc []string, _, _ string, _ int64, _ string, _ []byte, _ string, writtenOff, _ bool) error {
 	c.called = true
 	c.to = to
 	c.cc = cc

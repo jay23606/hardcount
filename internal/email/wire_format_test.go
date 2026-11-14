@@ -61,13 +61,13 @@ func TestWireFormat_EverySendPath(t *testing.T) {
 		wantText []string // must appear in the decoded text/plain part
 	}{
 		{"invoice", func() error {
-			return s.SendInvoice(ctx, "t1", "ap@acme.test", []string{"finance@acme.test"}, cust, "INV-000123", 123456, "eur", pdf, "tok_abc", false)
+			return s.SendInvoice(ctx, "t1", "ap@acme.test", []string{"finance@acme.test"}, cust, "INV-000123", 123456, "eur", pdf, "tok_abc", false, false)
 		}, []string{cust, "INV-000123"}},
 		{"invoice-written-off", func() error {
-			return s.SendInvoice(ctx, "t1", "ap@acme.test", nil, cust, "INV-000125", 123456, "eur", pdf, "tok_abc", true)
+			return s.SendInvoice(ctx, "t1", "ap@acme.test", nil, cust, "INV-000125", 123456, "eur", pdf, "tok_abc", true, false)
 		}, []string{cust, closedForOnlinePayment, "View online: https://pay.example.com/invoice/tok_abc"}},
 		{"invoice-zero", func() error {
-			return s.SendInvoice(ctx, "t1", "ap@acme.test", nil, cust, "INV-000124", 0, "eur", pdf, "tok_abc", false)
+			return s.SendInvoice(ctx, "t1", "ap@acme.test", nil, cust, "INV-000124", 0, "eur", pdf, "tok_abc", false, false)
 		}, []string{cust, "settled"}},
 		{"receipt", func() error {
 			return s.SendPaymentReceipt(ctx, "t1", "ap@acme.test", nil, cust, "INV-000123", 123456, "eur", "tok_abc")
